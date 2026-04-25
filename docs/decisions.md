@@ -83,10 +83,10 @@ When a decision is reversed, do not delete the original — append a "Superseded
 
 ## D-9 — Module path and Go version
 
-**Decision:** Module path `github.com/iserter/sagescore`. Minimum Go version: 1.24.
+**Decision:** Module path `github.com/iserter/sagescore`. Minimum Go version: 1.25.
 **Date:** 2026-04-25.
-**Reasoning:** GitHub username matches; vanity import path is unnecessary for v0.1. Go 1.24 is the current toolchain on the dev machine and brings standard-library improvements (e.g. `sync/atomic` enhancements, generic improvements) that we benefit from at zero cost.
-**Implications:** `go.mod` declares `go 1.24`. CI pins the same version.
+**Reasoning:** GitHub username matches; vanity import path is unnecessary for v0.1. Initial target was 1.24; bumped to 1.25 when adding `github.com/PuerkitoBio/goquery v1.12.0`, which declares `go 1.25.0` in its module. 1.25 is current stable and is the dev-machine toolchain; no reason to pin older.
+**Implications:** `go.mod` declares `go 1.25.0`. CI pins `1.25`. Any contributor on 1.24 must upgrade.
 
 ---
 
@@ -96,6 +96,25 @@ When a decision is reversed, do not delete the original — append a "Superseded
 **Date:** 2026-04-25.
 **Reasoning:** Documented in Technical Plan §5.1. Single-line driver swap, struct-tag schema kept beside domain types, AutoMigrate in v0.1 with goose-based SQL migrations as an escape hatch. `ent` and `sqlc` rejected for v0.1 reasons in the Technical Plan.
 **Implications:** `pkg/store` exposes a repository interface; GORM is the implementation behind it. Tests use in-memory SQLite (`:memory:`).
+
+---
+
+## D-12 — Release automation via release-please
+
+**Decision:** Adopt [googleapis/release-please-action](https://github.com/googleapis/release-please-action) (v4) for versioning and GitHub releases. Conventional commits on `main` drive automated release PRs; merging those PRs tags and publishes the release.
+**Date:** 2026-04-25.
+**Reasoning:**
+- Eliminates the "who forgot to bump the version" problem; the version is a function of commit history, not human discipline.
+- Native Go support: `release-type: "go"` tags as `vX.Y.Z` and integrates with `go install github.com/iserter/sagescore/cmd/sagescore@vX.Y.Z` without extra config.
+- Generates a `CHANGELOG.md` automatically, in a predictable format, from conventional-commit messages.
+- The Version constant in `pkg/scorer/scorer.go` is kept in sync via the `x-release-please-version` marker comment — single source of truth.
+
+**Implications:**
+- Contributors must use conventional commits on `main`. `feat:`, `fix:`, `docs:`, `refactor:`, `perf:`, `revert:` are user-visible; `chore:`, `test:`, `build:`, `ci:` are hidden from the changelog.
+- `release-please-config.json` + `.release-please-manifest.json` live at repo root.
+- `bootstrap-sha` is pinned to the current HEAD so historical (pre-adoption) commits don't retroactively trigger releases.
+- The `release-please.yml` workflow also builds and attaches `darwin-amd64/arm64` and `linux-amd64/arm64` binaries on every tagged release, so `gh release download` gives pre-built CLIs.
+- Pre-1.0 bump behaviour: `bump-minor-pre-major: true` and `bump-patch-for-minor-pre-major: true` — a `feat:` goes 0.2.0 → 0.3.0, a `fix:` goes 0.2.0 → 0.2.1, matching the methodology's versioning policy.
 
 ---
 

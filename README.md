@@ -15,7 +15,7 @@ The scoring engine is open source. The methodology is fully documented and repro
 | Phase | Status |
 |---|---|
 | 0 — Decisions & scaffold | In progress (Apr 2026) |
-| 1 — Scoring engine | Pending (May 19–25) |
+| 1 — Scoring engine | ✅ Complete (v0.2.0-dev) |
 | 2 — Web service | Pending |
 | 3 — pSEO fitness, removal flow | Pending |
 | 4 — Soft launch | Pending (target: Jun 30, 2026) |
@@ -37,7 +37,7 @@ The scoring engine is open source. The methodology is fully documented and repro
 
 ## Build
 
-Requires Go 1.24+.
+Requires Go 1.25+.
 
 ```sh
 make build      # build the CLI and web binaries
@@ -45,11 +45,16 @@ make test       # run the test suite
 make vet        # go vet
 ```
 
-Phase 1 will enable:
+Run a real audit:
 
 ```sh
 make audit DOMAIN=example.com
+# or directly:
+./bin/sagescore audit example.com -v
+./bin/sagescore audit example.com -o audit.json
 ```
+
+The CLI prints a per-dimension score table, a per-page breakdown, and (with `-v`) every finding. With `-o`, it writes a full JSON audit for machine consumption.
 
 ---
 

@@ -1,0 +1,66 @@
+name: release-please
+
+# Runs on every push to main. On a commit with conventional-commit
+# prefixes (feat:, fix:, etc.), release-please opens or updates a
+# "release PR" bumping the version, the Version constant, and the
+# CHANGELOG. Merging that PR creates the git tag and GitHub release.
+#
+# Docs: https://github.com/googleapis/release-please-action
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  release-please:
+    name: release-please
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      # When release-please creates a tagged release (the release PR
+      # got merged), build the binaries and attach them to the GitHub
+      # release. Skipped when there's no release this run.
+      - uses: actions/checkout@v4
+        if: ${{ steps.release.outputs.release_created }}
+
+      - name: Set up Go
+        if: ${{ steps.release.outputs.release_created }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: Build release binaries
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          mkdir -p dist
+          for os in linux darwin; do
+            for arch in amd64 arm64; do
+              GOOS=$os GOARCH=$arch go build \
+                -ldflags "-s -w" \
+                -o dist/sagescore-${os}-${arch} ./cmd/sagescore
+              GOOS=$os GOARCH=$arch go build \
+                -ldflags "-s -w" \
+                -o dist/sagescore-web-${os}-${arch} ./cmd/sagescore-web
+            done
+          done
+          (cd dist && sha256sum * > SHA256SUMS)
+
+      - name: Attach binaries to GitHub release
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ steps.release.outputs.tag_name }}" \
+            dist/* --clobber
