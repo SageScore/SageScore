@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# SageScore pre-commit hook.
+#
+# Activate once per clone:
+#   git config core.hooksPath .githooks
+#
+# Runs gofmt on staged Go files and the content lint on staged
+# templates/content. Exits non-zero on any violation.
+
+set -euo pipefail
+
+staged_go=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$' || true)
+if [ -n "$staged_go" ]; then
+  bad=$(echo "$staged_go" | xargs gofmt -l)
+  if [ -n "$bad" ]; then
+    echo "pre-commit: gofmt violations:"
+    echo "$bad"
+    exit 1
+  fi
+fi
+
+staged_content=$(git diff --cached --name-only --diff-filter=ACM \
+  | grep -E '^(templates|content)/.*\.(gohtml|html|md)$' || true)
+if [ -n "$staged_content" ]; then
+  go run ./scripts/lint-content .
+fi

@@ -1,0 +1,124 @@
+# Authoritative domains list — SageScore v0.1
+#
+# Used by the citation-worthiness analyser (docs/methodology.md §6) to
+# detect outbound links to high-authority sources. One bare domain per
+# line, lowercase, no scheme, no path. Lines starting with '#' are
+# comments. Subdomains are NOT matched recursively — list each one
+# explicitly.
+#
+# Curation principles:
+#   - Globally recognised reference, government, education, or major
+#     news outlets.
+#   - No commercial review/affiliate sites.
+#   - No paywalled-by-default sources unless the title is widely
+#     considered authoritative (e.g. NYT, FT).
+#   - Prefer top-level institutional domains (nih.gov) over individual
+#     sub-projects.
+#
+# Updates ship as PRs and trigger a scorer-version patch bump.
+
+# Reference / encyclopaedic
+wikipedia.org
+britannica.com
+archive.org
+scholar.google.com
+
+# Government / international bodies
+gov.uk
+europa.eu
+un.org
+who.int
+oecd.org
+worldbank.org
+imf.org
+nih.gov
+cdc.gov
+nasa.gov
+noaa.gov
+fda.gov
+ftc.gov
+sec.gov
+ed.gov
+
+# Standards bodies
+ietf.org
+rfc-editor.org
+w3.org
+iso.org
+ieee.org
+iana.org
+unicode.org
+
+# Education (a representative sample; not comprehensive)
+mit.edu
+stanford.edu
+harvard.edu
+berkeley.edu
+ox.ac.uk
+cam.ac.uk
+ed.ac.uk
+ucl.ac.uk
+imperial.ac.uk
+ethz.ch
+mpg.de
+cnrs.fr
+
+# Major news (broadsheets and wire services)
+bbc.co.uk
+bbc.com
+reuters.com
+apnews.com
+nytimes.com
+washingtonpost.com
+wsj.com
+ft.com
+economist.com
+theguardian.com
+thetimes.co.uk
+bloomberg.com
+npr.org
+politico.eu
+politico.com
+spiegel.de
+lemonde.fr
+
+# Tech press (signal-to-noise filter applied)
+arstechnica.com
+theverge.com
+techcrunch.com
+wired.com
+404media.co
+
+# Scientific publishers / preprint servers
+nature.com
+science.org
+sciencedirect.com
+springer.com
+arxiv.org
+biorxiv.org
+medrxiv.org
+plos.org
+pubmed.ncbi.nlm.nih.gov
+nejm.org
+thelancet.com
+bmj.com
+
+# Tech reference / docs hubs (used as authoritative citations in tech blogs)
+developer.mozilla.org
+docs.python.org
+go.dev
+golang.org
+nodejs.org
+kubernetes.io
+postgresql.org
+sqlite.org
+schema.org
+json-ld.org
+
+# Statistical / dataset
+ourworldindata.org
+data.europa.eu
+data.gov
+data.gov.uk
+ons.gov.uk
+statista.com

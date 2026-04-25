@@ -1,0 +1,91 @@
+{
+  "version": "0.1.0",
+  "comment": "Hand-curated CMS fingerprint set. Used only to select the 'What is AEO' content variant on the audit page (docs/methodology.md). Detection is best-effort; the 'unknown' fallback is fine. Each fingerprint is tested in array order; first match wins. Header and meta keys are case-insensitive; values are matched as case-insensitive substrings unless otherwise noted.",
+  "fingerprints": [
+    {
+      "name": "wordpress",
+      "display": "WordPress",
+      "header_match": {"x-powered-by": "wordpress"},
+      "meta_match": {"generator": "wordpress"},
+      "path_match": ["/wp-content/", "/wp-includes/", "/?p=", "/wp-login.php"]
+    },
+    {
+      "name": "shopify",
+      "display": "Shopify",
+      "header_match": {"x-shopify-stage": "*", "powered-by": "shopify"},
+      "meta_match": {"shopify-checkout-api-token": "*"},
+      "path_match": ["/cdn.shopify.com/", "/products/", "/collections/"]
+    },
+    {
+      "name": "webflow",
+      "display": "Webflow",
+      "header_match": {"x-served-by": "webflow"},
+      "meta_match": {"generator": "webflow"},
+      "path_match": ["/webflow.com/", "data-wf-page", "data-wf-site"]
+    },
+    {
+      "name": "squarespace",
+      "display": "Squarespace",
+      "header_match": {"server": "squarespace"},
+      "meta_match": {"generator": "squarespace"},
+      "path_match": ["/static.squarespace.com/", "Squarespace-CDN"]
+    },
+    {
+      "name": "wix",
+      "display": "Wix",
+      "header_match": {"x-wix-request-id": "*"},
+      "meta_match": {"generator": "wix.com website builder"},
+      "path_match": ["/static.wixstatic.com/", "wix-warmup-data"]
+    },
+    {
+      "name": "nextjs",
+      "display": "Next.js",
+      "header_match": {"x-nextjs-cache": "*", "x-nextjs-prerender": "*"},
+      "meta_match": {"next-head-count": "*"},
+      "path_match": ["/_next/static/", "/_next/data/"]
+    },
+    {
+      "name": "gatsby",
+      "display": "Gatsby",
+      "header_match": {},
+      "meta_match": {"generator": "gatsby"},
+      "path_match": ["/page-data/", "gatsby-image-wrapper"]
+    },
+    {
+      "name": "hugo",
+      "display": "Hugo",
+      "header_match": {},
+      "meta_match": {"generator": "hugo"},
+      "path_match": []
+    },
+    {
+      "name": "ghost",
+      "display": "Ghost",
+      "header_match": {"x-ghost-cache-status": "*"},
+      "meta_match": {"generator": "ghost"},
+      "path_match": ["/content/images/"]
+    },
+    {
+      "name": "drupal",
+      "display": "Drupal",
+      "header_match": {"x-generator": "drupal", "x-drupal-cache": "*"},
+      "meta_match": {"generator": "drupal"},
+      "path_match": ["/sites/default/files/", "/node/"]
+    },
+    {
+      "name": "joomla",
+      "display": "Joomla",
+      "header_match": {},
+      "meta_match": {"generator": "joomla"},
+      "path_match": ["/components/com_", "/templates/"]
+    },
+    {
+      "name": "unknown",
+      "display": "Unknown / Custom",
+      "header_match": {},
+      "meta_match": {},
+      "path_match": [],
+      "fallback": true
+    }
+  ]
+}

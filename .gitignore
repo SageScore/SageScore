@@ -1,0 +1,27 @@
+# Build artefacts
+/bin/
+*.test
+*.out
+
+# Local SQLite data (Phase 2+)
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# Local secrets / env files
+.env
+.env.local
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Generated OG images at runtime (Phase 2+)
+/static/og/
+
+# Coverage
+coverage.out
+coverage.html

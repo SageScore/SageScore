@@ -61,42 +61,56 @@ After `tech_seo` the CLI can produce useful (if partial) output. That's the natu
 
 **End of day:** `Crawl()` returns 5–10 `Response` objects for a real test domain on `make audit DOMAIN=example.com`.
 
+> **Note:** Analyser specs below reflect methodology **v0.2.0** (see `docs/methodology.md` and `docs/decisions.md` D-11). Sub-score weights inside each analyser match the v0.2 spec.
+
 ### Day 3 — Schema + AI-crawler analysers
 
-- [ ] `pkg/scorer/analyse/schema.go`:
-  - Iterate JSON-LD blocks per page, validate against expected types for that page kind.
-  - Findings: `SCHEMA_ARTICLE_MISSING`, `SCHEMA_FAQ_MISSING`, `SCHEMA_ORG_MISSING`, `SCHEMA_INVALID_JSON`, `SCHEMA_MISSING_REQUIRED_PROP`.
-  - Per-page score = % of expected schemas present and valid.
-- [ ] `pkg/scorer/analyse/ai_crawlers.go`:
+- [ ] `pkg/scorer/analyse/schema.go` (weight 22%):
+  - Iterate JSON-LD blocks per page, validate against expected types for that page kind: homepage → `Organization`/`WebSite` + `BreadcrumbList`; article → `Article`/`BlogPosting` + `Person` (author); product → `Product`; also `FAQPage`, `HowTo`, `Course`, `Event`.
+  - Score formula: `(valid_expected / total_expected) × 80 + 10 (homepage Organization) + 10 (all articles have Person) - 10 per invalid JSON-LD block (up to -30)`, clamped to [0, 100].
+  - Findings: `SCHEMA_ARTICLE_MISSING`, `SCHEMA_PERSON_AUTHOR_MISSING`, `SCHEMA_FAQ_MISSING`, `SCHEMA_ORG_MISSING`, `SCHEMA_PRODUCT_MISSING`, `SCHEMA_INVALID_JSON`, `SCHEMA_MISSING_REQUIRED_PROP`, `SCHEMA_BREADCRUMB_MISSING`.
+- [ ] `pkg/scorer/analyse/ai_crawlers.go` (weight 12%):
   - Domain-level. Inputs: `RobotsSummary`.
-  - Score components: explicit allow for each of GPTBot/PerplexityBot/ClaudeBot/Google-Extended/Applebot-Extended (10 pts each), `llms.txt` present (25 pts), wildcard-disallow penalty (-25 pts).
-  - Findings: `AI_CRAWLER_BLOCKED_<UA>`, `LLMS_TXT_MISSING`, `WILDCARD_DISALLOW`.
+  - Score components: each of `GPTBot`, `PerplexityBot`, `ClaudeBot`, `Google-Extended` allowed = 14 pts; `Applebot-Extended` = 10; `Bytespider`/`Amazonbot` = 4; `llms.txt` present = 10; `llms-full.txt` = 5; dedicated `SageScoreBot` rule (any direction) = 2; wildcard `* / Disallow: /` = -25.
+  - Findings: `AI_CRAWLER_BLOCKED_GPTBOT`, `AI_CRAWLER_BLOCKED_PERPLEXITY`, `AI_CRAWLER_BLOCKED_CLAUDE`, `AI_CRAWLER_BLOCKED_GOOGLE_EXTENDED`, `AI_CRAWLER_BLOCKED_APPLEBOT_EXTENDED`, `AI_CRAWLER_BLOCKED_BYTESPIDER`, `LLMS_TXT_MISSING`, `WILDCARD_DISALLOW`.
 - [ ] Unit tests with at least 5 fixtures per analyser, each covering one finding code.
 
 ### Day 4 — Tech SEO + Content analysers
 
-- [ ] `pkg/scorer/analyse/tech_seo.go`:
-  - Per-page. Canonical present + matches URL, meta description 50–160 chars, title 30–65 chars, sitemap reachable (domain-level signal piped in), OG + Twitter cards.
-  - Findings: `TECH_CANONICAL_MISSING`, `TECH_META_DESC_TOO_SHORT`, `TECH_TITLE_TOO_LONG`, `TECH_OG_MISSING`, `TECH_SITEMAP_UNREACHABLE`.
-- [ ] `pkg/scorer/analyse/content.go`:
-  - Per-page. Heading hierarchy validity (no h3 without an h2 above it), mean paragraph length, BLUF heuristic (first sentence < 200 chars, contains a noun + verb via simple POS heuristics — no NLP libraries), Flesch reading ease.
-  - Findings: `CONTENT_H_HIERARCHY_BROKEN`, `CONTENT_BLUF_WEAK`, `CONTENT_PARAGRAPHS_TOO_LONG`, `CONTENT_READING_EASE_LOW`.
+- [ ] `pkg/scorer/analyse/tech_seo.go` (weight 10%):
+  - Per-page. Eight checks: canonical, meta description length (50–160), title length (30–65), OG tags, Twitter tags, sitemap reachable (domain-level signal piped in), HTML size < 300 KB (LCP proxy), ≤2 render-blocking `<script>` tags in `<head>` without `async`/`defer` (INP proxy).
+  - Findings: `TECH_CANONICAL_MISSING`, `TECH_META_DESC_TOO_SHORT`, `TECH_META_DESC_TOO_LONG`, `TECH_TITLE_TOO_LONG`, `TECH_OG_MISSING`, `TECH_TWITTER_MISSING`, `TECH_SITEMAP_UNREACHABLE`, `TECH_HTML_TOO_LARGE`, `TECH_RENDER_BLOCKING_SCRIPTS`.
+- [ ] `pkg/scorer/analyse/content.go` (weight 20%):
+  - Per-page. Seven weighted checks:
+    - **BLUF / answer-first** (20 pts): first paragraph under 100 words, contains a complete answer-shaped statement.
+    - **Chunk-size hygiene** (20 pts): sections between same-level headings average 150–300 words.
+    - **Structural-element ratio** (20 pts): `(<ul> + <ol> + <table> + <pre>) / content_units` in the 0.25–0.35 band.
+    - **Paragraph length** (10 pts): mean `<p>` 30–80 words.
+    - **Heading depth/validity** (15 pts): no `h_n` without `h_(n-1)` above; overall depth 3–5 levels.
+    - **Readability** (10 pts): Flesch reading ease ≥ 50 = full; linearly degraded to 0 at Flesch = 20.
+    - **Keyword-stuffing penalty** (0 to -5): if top repeated non-stopword > 3% of total word count → -5.
+  - Findings: `CONTENT_BLUF_MISSING`, `CONTENT_CHUNKS_TOO_LONG`, `CONTENT_CHUNKS_TOO_SHORT`, `CONTENT_LOW_STRUCTURAL_ELEMENTS`, `CONTENT_H_HIERARCHY_BROKEN`, `CONTENT_HEADINGS_TOO_FLAT`, `CONTENT_HEADINGS_TOO_DEEP`, `CONTENT_PARAGRAPHS_TOO_LONG`, `CONTENT_READING_EASE_LOW`, `CONTENT_KEYWORD_STUFFING`.
 - [ ] CLI checkpoint: `sagescore audit example.com` now prints a partial score with 3 of 6 dimensions filled.
 
-### Day 5 — Entity + Citations + aggregation + CLI polish + golden tests
+### Day 5 — Entity + Evidence & Citations + aggregation + CLI polish + golden tests
 
-- [ ] `pkg/scorer/analyse/entity.go`:
-  - Domain-level. Inputs: homepage `ParsedPage`, `/about` `ParsedPage`, footer text.
-  - Author/Org schema, About page presence, NAP regex (phone/email/address), `sameAs` social links, `<meta name="author">`.
-  - Findings: `ENTITY_ABOUT_MISSING`, `ENTITY_NAP_INCOMPLETE`, `ENTITY_SOCIAL_MISSING`, `ENTITY_ORG_SCHEMA_MISSING`.
-- [ ] `pkg/scorer/analyse/citations.go`:
-  - Per-page. Outbound link analysis using `pkg/scorer/data/authoritative.txt`, internal anchor density, `dateModified` or last-mod header recency.
-  - Findings: `CITATIONS_NO_AUTHORITATIVE_OUTBOUND`, `CITATIONS_THIN_INTERNAL_LINKING`, `CITATIONS_STALE_CONTENT`.
+- [ ] `pkg/scorer/analyse/entity.go` (weight 18%, renamed "E-E-A-T"):
+  - Domain-level. Inputs: homepage `ParsedPage`, `/about` `ParsedPage`, footer text, per-article `Person` schema, author-bio anchor detection.
+  - Seven checks (20/15/10/10/25/10/10 points): `Organization` schema on homepage; `Organization.sameAs` chain (≥3 links); `/about` exists + contains org name; NAP completeness (≥2 of phone/email/address); `Person` schema on articles + byline links to bio page; author credentials on bio page; `Person.sameAs` social proof (≥2 to LinkedIn / ORCID / Google Scholar).
+  - Findings: `ENTITY_ORG_SCHEMA_MISSING`, `ENTITY_ORG_SAMEAS_MISSING`, `ENTITY_ABOUT_MISSING`, `ENTITY_NAP_INCOMPLETE`, `ENTITY_PERSON_SCHEMA_MISSING`, `ENTITY_AUTHOR_BIO_MISSING`, `ENTITY_AUTHOR_CREDENTIALS_MISSING`, `ENTITY_SOCIAL_PROOF_WEAK`.
+- [ ] `pkg/scorer/analyse/evidence.go` (weight 18%, renamed "Evidence & Citation Readiness"):
+  - Per-page. Five weighted checks (Princeton GEO-informed):
+    - **Statistics density** (20 pts): ≥3 distinct numeric facts per 1,000 words (digits, %, currency, year references).
+    - **Direct quotations with attribution** (20 pts): ≥1 `<blockquote>`/`<q>` per article page with an attribution phrase nearby.
+    - **Outbound authoritative citations** (20 pts): ≥2 distinct outbound links to domains in `pkg/scorer/data/authoritative.txt` per article page; scales linearly up to 5.
+    - **Internal anchor density** (15 pts): internal links per 1,000 words in 5–15 band.
+    - **Freshness** (25 pts): `dateModified` or `Last-Modified` header within 180 days = 25; within 365 = 18; within 730 = 10; older = 0.
+  - Findings: `EVIDENCE_STATISTICS_THIN`, `EVIDENCE_NO_QUOTATIONS`, `CITATIONS_NO_AUTHORITATIVE_OUTBOUND`, `CITATIONS_THIN_INTERNAL_LINKING`, `CITATIONS_DENSE_INTERNAL_LINKING`, `CITATIONS_STALE_CONTENT`.
 - [ ] `pkg/scorer/score.go`:
-  - Per-page roll-up: weighted across schema (25%) / content (20%) / tech_seo (10%) / citations (10%) — these four are page-level. Renormalise to 0-100.
-  - Domain-level dimensions: ai_crawlers (20%) and entity_clarity (15%) computed once.
+  - Per-page roll-up: weighted across schema (22%) / content (20%) / tech_seo (10%) / evidence (18%) — these four are page-level. Renormalise to 0–100.
+  - Domain-level dimensions: ai_crawlers (12%) and entity_clarity (18%) computed once.
   - Domain score: weighted sum of (page-level dimensions averaged with homepage 2× / articles 1× / others 1×) + domain-level dimensions.
-  - `ARTICLES_INSUFFICIENT_SAMPLE` finding when fewer than 3 articles found; cap citation sub-score at 70.
+  - `ARTICLES_INSUFFICIENT_SAMPLE` finding when fewer than 3 articles found; cap Evidence & Citation Readiness sub-score at 70.
   - Banker's rounding to int.
 - [ ] `cmd/sagescore/main.go`:
   - Cobra-style CLI: `sagescore audit <domain> [-o file.json] [-v]`.

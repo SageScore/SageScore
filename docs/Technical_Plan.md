@@ -124,14 +124,16 @@ type Sub struct {
 
 ### 3.2 Sub-score implementations
 
+Weights are the v0.2.0 methodology (evidence-informed). See `docs/methodology.md` for the normative spec and the research base; the short rationale for each re-weighting is in `docs/decisions.md` D-11.
+
 | Dimension | Inputs | Method | Weight |
 |---|---|---|---|
-| Structured data | Sampled pages | Parse all `<script type="application/ld+json">`, validate types against schema.org expected for detected page kind (homepage → `Organization`/`WebSite`; blog → `Article`; product → `Product`; FAQ → `FAQPage`). Score = % of expected schemas present and valid. | 25% |
-| AI-crawler access | `/robots.txt`, `/llms.txt`, `/llms-full.txt` | Boolean checks for `GPTBot`, `PerplexityBot`, `ClaudeBot`, `Google-Extended`, `Applebot-Extended`. Penalise wildcard disallow, reward explicit allow + presence of `llms.txt`. | 20% |
-| Content structure | Sampled pages | h-tag tree validity, mean paragraph length, BLUF heuristic (first sentence under 200 chars and contains a noun + verb), Flesch reading ease. | 20% |
-| Entity clarity | Homepage + `/about` + footer | Author/Org schema, About page presence, NAP regex (phone, email, address), `sameAs` social links, `<meta name="author">`. | 15% |
-| Technical SEO | Sampled pages | `<link rel="canonical">`, `<meta name="description">` 50–160 chars, `<title>` 30–65 chars, sitemap reachable, OG + Twitter cards. | 10% |
-| Citation-worthiness | Sampled pages | Outbound link analysis (domains classified via embedded list of authoritative TLDs/domains), internal anchor density, `dateModified` or last-mod header recency. | 10% |
+| Structured data | Sampled pages | Parse all `<script type="application/ld+json">`, validate types against schema.org expected for detected page kind (homepage → `Organization`/`WebSite`; blog → `Article` + `Person` for author; product → `Product`; FAQ → `FAQPage`; also `HowTo`, `Course`, `Event`, `BreadcrumbList`). | 22% |
+| AI-crawler access | `/robots.txt`, `/llms.txt`, `/llms-full.txt` | Boolean checks for `GPTBot`, `PerplexityBot`, `ClaudeBot`, `Google-Extended`, `Applebot-Extended`, `Bytespider`. Penalise wildcard disallow, modest reward for `llms.txt` (adoption remains limited). | 12% |
+| Content structure | Sampled pages | BLUF / answer-first opening, 150–300 word chunk hygiene, 0.25–0.35 structural-element ratio (lists/tables/code blocks), heading depth 3–5, paragraph length 30–80 words, Flesch readability, keyword-stuffing penalty. | 20% |
+| Entity clarity (E-E-A-T) | Homepage + `/about` + footer + per-article Person schema + author bios | `Organization` + `Person` schema with `sameAs` chains (LinkedIn/ORCID/Crunchbase/etc.), About page, NAP, author byline links to bio pages, credentials. | 18% |
+| Technical SEO | Sampled pages | `<link rel="canonical">`, `<meta name="description">` 50–160 chars, `<title>` 30–65 chars, sitemap reachable, OG + Twitter cards, HTML size < 300 KB (LCP proxy), ≤2 render-blocking `<script>` in `<head>` (INP proxy). | 10% |
+| Evidence & citation readiness | Sampled pages | Statistics density (≥3 numeric facts per 1000 words), direct quotations with attribution, outbound citations to authoritative-domain list, internal anchor density (5–15 per 1000 words), freshness with 180-day cliff (Perplexity citation threshold). | 18% |
 
 Final score: `round(Σ weight_i × sub_i)`. Tie-broken to integer with banker's rounding for stability across re-audits.
 
