@@ -20,6 +20,13 @@ triggers a major-version bump.
 
 ---
 
+## [0.2.1](https://github.com/SageScore/SageScore/compare/sagescore-v0.2.0...sagescore-v0.2.1) (2026-04-25)
+
+
+### Features
+
+* implement Phase 1 scoring engine and release-please automation ([3b0bc65](https://github.com/SageScore/SageScore/commit/3b0bc6564256bafd75211992fefa86f030f37392))
+
 ## 0.2.0 (2026-04-25)
 
 Initial tracked release — Phase 0 (scaffold) and Phase 1 (scoring

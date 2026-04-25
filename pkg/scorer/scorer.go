@@ -20,7 +20,7 @@ import (
 // Version is the scorer's SemVer string. Stamped onto every audit.
 // Updated automatically on merge by release-please; do not bump by
 // hand. The marker comment on the same line is load-bearing.
-const Version = "0.2.0" // x-release-please-version
+const Version = "0.2.1" // x-release-please-version
 
 // ErrInvalidDomain is returned for malformed/unsafe input domains.
 var ErrInvalidDomain = errors.New("scorer: invalid domain")
